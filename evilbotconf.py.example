@@ -45,7 +45,8 @@ LL_TURNCOUNTS = {
 # and the name of the "slave" bot that looks after each server.
 #            alias: (fqdn-of-server, remote-bot, path-to-local-copy-of-xlogfiles)
 # only define one of REMOTES or MASTERS
-REMOTES = { "hdf-eu": ("eu.hardfought.org", "evilbot-eu", "/var/www/xlogs-eu")}
+REMOTES = { "hdf-eu": ("eu.hardfought.org", "EvilBot-EU", "/var/www/html/xlogfiles/"),
+            "hdf-au": ("au.hardfought.org", "EvilBot-AU", "/var/www/html/xlogfiles/")}
 # If we're a remote "slave" bot, MASTERS defines who we announce to, and who we take
 # queries from for !whereis, etc.
 #MASTERS = ["EvilBot"]
