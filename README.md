@@ -1,5 +1,5 @@
-# beholder
-IRC Announce Bot for hardfought.org, based on http://ascension.run/deathbot.py
+# evilbot
+IRC Announce Bot for #evilhack, based on https://github.com/NHTangles/beholder
 run with twistd, as follows:
  twistd -y beholder.py
 Some enhancements to the original deathbot code include:

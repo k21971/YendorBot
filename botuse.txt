@@ -1,7 +1,7 @@
-Beholder, of #hardfought
+EvilBot, of #evilhack
 
-Beholder is linked to the NetHack game server hardfought.org, and lives in the freenode irc channel #hardfought.
-Beholder reports on games being played on the server, including ascensions(wins), deaths(losses), and other significant game events.
+EvilBot is linked to the NetHack game server hardfought.org, and lives in the freenode irc channel #evilhack.
+EvilBot reports on EvilHack games being played on the server, including ascensions(wins), deaths(losses), and other significant game events.
 
 Additionally, it responds to the following commands:
 
@@ -41,10 +41,4 @@ Other:
 
 Aliases:
 Where commands take the name of a variant, the following aliases are accepted:
-    nh: nh343 nethack 343
-    nd: nhdev nh361 361dev 361 dev
-    gh: grunt grunthack
-    un: unnethack unh
-    fh: fiqhack 
-    4k: nhfourk nhf fourk
-
+    evil: evilhack evil

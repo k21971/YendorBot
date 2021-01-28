@@ -1,4 +1,4 @@
-# Instance-specific config for "Beholder" bot.
+# Instance-specific config for "EvilBot" bot.
 #
 
 # server tag - mandatory for all instances
@@ -7,22 +7,22 @@ SERVERTAG = "hdf-us"
 HOST, PORT = "chat.us.freenode.net", 6697
 
 # Nick, channel, etc
-CHANNEL = "#hardfought" #channel is ignored on slave bots.
-NICK = "Beholder"
-USERNAME = "Beholder"
-REALNAME = "Beholder"
+CHANNEL = "#evilhack" #channel is ignored on slave bots.
+NICK = "EvilBot"
+USERNAME = "EvilBot"
+REALNAME = "EvilBot"
 # working directory (some files will be created here)
-BOTDIR = "/opt/beholder"
+BOTDIR = "/opt/evilbot"
 # file containing the nickserv password for NICK
 PWFILE = BOTDIR + "/pw"
 
 # file/web paths for dumplogs and ttyrecs.
 # subfolders are still hardcoded in the main bot.
 # trailing slash is required!
-FILEROOT="/opt/nethack/hardfought.org/"
-WEBROOT="https://www.hardfought.org/"
+FILEROOT="/opt/nethack/chroot/"
+#WEBROOT="https://www.hardfought.org/"
 # directory to place channel logs.
-LOGROOT="/var/www/hardfought.org/irclog/"
+#LOGROOT="/var/www/hardfought.org/irclog/"
 # Name of bot to forward "pinobot"-style queries
 PINOBOT = "Pinoclone"
 # Name of bot in our channel that bridges discord network
@@ -45,7 +45,7 @@ LL_TURNCOUNTS = {
 # and the name of the "slave" bot that looks after each server.
 #            alias: (fqdn-of-server, remote-bot, path-to-local-copy-of-xlogfiles)
 # only define one of REMOTES or MASTERS
-REMOTES = { "hdf-eu": ("eu.hardfought.org", "beholder-eu", "/var/www/xlogs-eu")}
+REMOTES = { "hdf-eu": ("eu.hardfought.org", "evilbot-eu", "/var/www/xlogs-eu")}
 # If we're a remote "slave" bot, MASTERS defines who we announce to, and who we take
 # queries from for !whereis, etc.
-#MASTERS = ["Beholder"]
+#MASTERS = ["EvilBot"]
