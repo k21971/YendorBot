@@ -20,9 +20,9 @@ PWFILE = BOTDIR + "/pw"
 # subfolders are still hardcoded in the main bot.
 # trailing slash is required!
 FILEROOT="/opt/nethack/chroot/"
-#WEBROOT="https://www.hardfought.org/"
+WEBROOT="https://www.hardfought.org/"
 # directory to place channel logs.
-#LOGROOT="/var/www/hardfought.org/irclog/"
+LOGROOT="/var/www/hardfought.org/irclog.evil/"
 # Name of bot to forward "pinobot"-style queries
 PINOBOT = "Pinoclone"
 # Name of bot in our channel that bridges discord network
