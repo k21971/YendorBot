@@ -133,7 +133,7 @@ class DeathBotProtocol(irc.IRCClient):
     dump_file_prefix = FILEROOT + "dgldir/userdata/{name[0]}/{name}/"
 
     if not SLAVE:
-        scoresURL = WEBROOT + "nethack/scoreboard (HDF) or https://nethackscoreboard.org (ALL)"
+        scoresURL = WEBROOT + "nethack/scoreboard/evil-scores (HDF) or https://nethackscoreboard.org/ascended.evil.html"
         rceditURL = WEBROOT + "nethack/rcedit"
         helpURL = WEBROOT + "nethack"
         logday = time.strftime("%d")
