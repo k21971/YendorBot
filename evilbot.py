@@ -871,7 +871,7 @@ class DeathBotProtocol(irc.IRCClient):
 
     # !players callback. Actually print the output.
     def outPlayers(self,q):
-        outmsg = " | ".join(q["resp"].values())
+        outmsg = " :: ".join(q["resp"].values())
         self.respond(q["replyto"],q["sender"],outmsg)
 
     def usageWhereIs(self, sender, replyto, msgwords):
@@ -921,7 +921,7 @@ class DeathBotProtocol(irc.IRCClient):
                 player = q["resp"][server].split(" ")[1]
             else:
                 msgs += [q["resp"][server]]
-        outmsg = " | ".join(msgs)
+        outmsg = " :: ".join(msgs)
         if not outmsg: outmsg = player + " is not playing."
         self.respond(q["replyto"],q["sender"],outmsg)
 
@@ -1035,7 +1035,7 @@ class DeathBotProtocol(irc.IRCClient):
                 fallback_msg = q["resp"][server]
             else:
                msgs += [q["resp"][server]]
-        outmsg = " | ".join(msgs)
+        outmsg = " :: ".join(msgs)
         if not outmsg: outmsg = fallback_msg
         self.respond(q["replyto"],q["sender"],outmsg)
 
