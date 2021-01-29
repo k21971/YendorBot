@@ -662,7 +662,7 @@ class DeathBotProtocol(irc.IRCClient):
            v = self.varalias(msgwords[1])
            #error if variant not found
            if not self.variants.get(v,False):
-               self.respond(replyto, sender, "No variant " + msgwords[1] + " on server.")
+               self.respond(replyto, sender, "EvilHack is the only variant option.")
                return
            self.respond(replyto, sender, self.rolename[random.choice(self.variants[v][1])])
         else:
@@ -675,7 +675,7 @@ class DeathBotProtocol(irc.IRCClient):
            v = self.varalias(msgwords[1])
            #error if variant not found
            if not self.variants.get(v,False):
-               self.respond(replyto, sender, "No variant " + msgwords[1] + " on server.")
+               self.respond(replyto, sender, "EvilHack is the only variant option.")
            self.respond(replyto, sender, self.racename[random.choice(self.variants[v][2])])
         else:
            v = random.choice(self.variants.keys())
