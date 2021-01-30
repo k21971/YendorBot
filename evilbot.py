@@ -1,3 +1,5 @@
+#!/usr/bin/python
+# -*- coding: UTF-8 -*-
 """
 evilbot.py - a game-reporting and general services IRC bot for
              EvilHack on the hardfought.org NetHack server.
@@ -34,9 +36,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
 from twisted.internet import reactor, protocol, ssl, task
+from twisted.internet.protocol import Protocol, ReconnectingClientFactory
 from twisted.words.protocols import irc
-from twisted.python import filepath
+from twisted.python import filepath, log
 from twisted.application import internet, service
+import site     # to help find botconf
+import base64   # for sasl login
+import sys      # for logging something4
 import datetime # for timestamp stuff
 import time     # for !time
 import ast      # for conduct/achievement bitfields - not really used
@@ -48,9 +54,14 @@ import shelve   # for persistent !tell messages
 import random   # for !rng and friends
 import glob     # for matching in !whereis
 
+site.addsitedir('.')
 from evilbotconf import HOST, PORT, CHANNEL, NICK, USERNAME, REALNAME, BOTDIR
 from evilbotconf import PWFILE, FILEROOT, WEBROOT, LOGROOT, PINOBOT, ADMIN
 from evilbotconf import SERVERTAG
+#from evilbotconf import HOST, PORT, CHANNEL
+#from evilbotconf import NICK, USERNAME, REALNAME
+#from evilbotconf import PWFILE, LOGDIR, PINOBOT, ADMIN
+
 try: from evilbotconf import LL_TURNCOUNTS
 except: LL_TURNCOUNTS = {}
 try: from evilbotconf import DCBRIDGE
@@ -239,17 +250,18 @@ class DeathBotProtocol(irc.IRCClient):
 
     def irc_CAP(self, prefix, params):
         if params[1] != 'ACK' or params[2].split() != ['sasl']:
-            print 'sasl not available'
+            print('sasl not available')
             self.quit('')
-        sasl = ('{0}\0{0}\0{1}'.format(self.nickname, self.password)).encode('base64').strip()
+        sasl_string = '{0}\0{0}\0{1}'.format(self.nickname, self.password)
+        sasl_b64_bytes = base64.b64encode(sasl_string.encode(encoding='UTF-8',errors='strict'))
         self.sendLine('AUTHENTICATE PLAIN')
-        self.sendLine('AUTHENTICATE ' + sasl)
+        self.sendLine('AUTHENTICATE ' + sasl_b64_bytes.decode('UTF-8'))
 
     def irc_903(self, prefix, params):
         self.sendLine('CAP END')
 
     def irc_904(self, prefix, params):
-        print 'sasl auth failed', params
+        print('sasl auth failed', params)
         self.quit('')
     irc_905 = irc_904
 
@@ -260,9 +272,9 @@ class DeathBotProtocol(irc.IRCClient):
         random.seed()
 
         self.logs = {}
-        for xlogfile, (variant, delim, dumpfmt) in self.xlogfiles.iteritems():
+        for xlogfile, (variant, delim, dumpfmt) in self.xlogfiles.items():
             self.logs[xlogfile] = (self.xlogfileReport, variant, delim, dumpfmt)
-        for livelog, (variant, delim) in self.livelogs.iteritems():
+        for livelog, (variant, delim) in self.livelogs.items():
             self.logs[livelog] = (self.livelogReport, variant, delim, "")
 
         self.logs_seek = {}
@@ -308,9 +320,16 @@ class DeathBotProtocol(irc.IRCClient):
             self.allgames[v] = {};
 
         # for !tell
-        self.tellbuf = shelve.open(BOTDIR + "/tellmsg.db", writeback=True)
+        try:
+            self.tellbuf = shelve.open(BOTDIR + "/tellmsg.db", writeback=True)
+        except:
+            self.tellbuf = shelve.open(BOTDIR + "/tellmsg", writeback=True, protocol=2)
+
         # for !setmintc
-        self.plr_tc = shelve.open(BOTDIR + "/plrtc.db", writeback=True)
+        try:
+            self.plr_tc = shelve.open(BOTDIR + "/plrtc.db", writeback=True)
+        except:
+            self.plr_tc = shelve.open(BOTDIR + "/plrtc", writeback=True, protocol=2)
 
         # Commands must be lowercase here.
         self.commands = {"ping"     : self.doPing,
@@ -493,7 +512,7 @@ class DeathBotProtocol(irc.IRCClient):
             # sender is passed to master; msgwords[2] is passed tp sender
             self.qCommands[msgwords[3]](sender,msgwords[2],msgwords[1],msgwords[3:])
         else:
-            print "Bogus slave query from " + sender + ": " + " ".join(msgwords);
+            print("Bogus slave query from " + sender + ": " + " ".join(msgwords));
 
     def doResponse(self, sender, replyto, msgwords):
         # called when slave returns query response to master
@@ -504,7 +523,7 @@ class DeathBotProtocol(irc.IRCClient):
                 #all slaves have responded
                 self.queries[msgwords[1]]["callback"](self.queries.pop(msgwords[1]))
         else:
-            print "Bogus slave response from " + sender + ": " + " ".join(msgwords);
+            print("Bogus slave response from " + sender + ": " + " ".join(msgwords));
 
     def timeoutQuery(self, query):
         if query not in self.queries: return # query was completed before timeout
@@ -842,7 +861,7 @@ class DeathBotProtocol(irc.IRCClient):
         message = "#Q# " + " ".join([q,sender] + msgwords)
 
         for sl in self.slaves.keys():
-            print "forwardQuery: " + sl
+            print("forwardQuery: " + sl)
             self.msg(sl,message)
         # set up the timeout in 5 seconds.
         reactor.callLater(5, self.timeoutQuery, q)
@@ -1231,7 +1250,7 @@ class DeathBotProtocol(irc.IRCClient):
         # Hello processing first.
         if re.match(r'^(hello|hi|hey|salut|hallo|guten tag|shalom|ciao|hola|aloha|bonjour|hei|gday|konnichiwa|nuqneh)[!?. ]*$', message.lower()):
             self.doHello(sender, replyto)
-        if re.match(r'^(rip|r\.i\.\p|rest in p).*$', message.lower()):
+        if re.match(r'^(rip|r\.i\.p|rest in p).*$', message.lower()):
             self.doRip(sender, replyto)
         # Message checks next.
         self.checkMessages(sender)
@@ -1489,7 +1508,7 @@ class DeathBotProtocol(irc.IRCClient):
 
     def connectionLost(self, reason=None):
         if self.looping_calls is None: return
-        for call in self.looping_calls.itervalues():
+        for call in self.looping_calls.values():
             call.stop()
 
     def logReport(self, filepath):
@@ -1514,10 +1533,45 @@ class DeathBotProtocol(irc.IRCClient):
 
             self.logs_seek[filepath] = handle.tell()
 
-if __name__ == "__builtin__":
-    f = protocol.ReconnectingClientFactory()
-    f.protocol = DeathBotProtocol
-    application = service.Application("DeathBot")
-    deathservice = internet.SSLClient(HOST, PORT, f,
-                                      ssl.ClientContextFactory())
-    deathservice.setServiceParent(application)
+class DeathBotFactory(ReconnectingClientFactory):
+    def startedConnecting(self, connector):
+        print('Started to connect.')
+
+    def buildProtocol(self, addr):
+        print('Connected.')
+        print('Resetting reconnection delay')
+        self.resetDelay()
+        p = DeathBotProtocol()
+        p.factory = self
+        return p
+
+    def clientConnectionLost(self, connector, reason):
+        print('Lost connection.  Reason:', reason)
+        ReconnectingClientFactory.clientConnectionLost(self, connector, reason)
+
+    def clientConnectionFailed(self, connector, reason):
+        print('Connection failed. Reason:', reason)
+        ReconnectingClientFactory.clientConnectionFailed(self, connector,
+                                                         reason)
+
+#if __name__ == "__main__":
+#    f = protocol.ReconnectingClientFactory()
+#    f.protocol = DeathBotProtocol()
+#    application = service.Application("DeathBot")
+#    deathservice = internet.SSLClient(HOST, PORT, f,
+#                                      ssl.ClientContextFactory())
+#    deathservice.setServiceParent(application)
+
+
+if __name__ == '__main__':
+    # initialize logging
+    #log.startLogging(sys.stdout)
+
+    # create factory protocol and application
+    f = DeathBotFactory()
+
+    # connect factory to this host and port
+    reactor.connectSSL(HOST, PORT, f, ssl.ClientContextFactory())
+
+    # run bot
+    reactor.run()

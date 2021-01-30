@@ -1,7 +1,7 @@
 # evilbot
 IRC Announce Bot for #evilhack, based on https://github.com/NHTangles/beholder
-run with twistd, as follows:
- twistd -y beholder.py
+run bot by executing the python script (twistd seems no longer required with new API):
+ ./beholder.py
 Some enhancements to the original deathbot code include:
  - delimiter-agnostic xlogfile parsing (because some newer variants have moved
    from the traditional ':' delimiter to a <tab> character.
@@ -13,3 +13,5 @@ Some enhancements to the original deathbot code include:
     !lastasc [variant] [player] - as above, but ascended games only.
     !tell <nick> <message> - repeat <message> next time <nick> is active.
     !beer, !goat - undocumented :P
+
+Dependencies (at least on arch linux) - python-twisted, python-pyopenssl, python-service-identity
