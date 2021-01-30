@@ -681,7 +681,7 @@ class DeathBotProtocol(irc.IRCClient):
            v = self.varalias(msgwords[1])
            #error if variant not found
            if not self.variants.get(v,False):
-               self.respond(replyto, sender, "No variant " + msgwords[1] + " on server.")
+               self.respond(replyto, sender, "EvilHack is the only variant option.")
                return
            self.respond(replyto, sender, self.rolename[random.choice(self.variants[v][1])])
         else:
@@ -694,7 +694,7 @@ class DeathBotProtocol(irc.IRCClient):
            v = self.varalias(msgwords[1])
            #error if variant not found
            if not self.variants.get(v,False):
-               self.respond(replyto, sender, "No variant " + msgwords[1] + " on server.")
+               self.respond(replyto, sender, "EvilHack is the only variant option.")
            self.respond(replyto, sender, self.racename[random.choice(self.variants[v][2])])
         else:
            v = random.choice(self.variants.keys())
@@ -890,7 +890,7 @@ class DeathBotProtocol(irc.IRCClient):
 
     # !players callback. Actually print the output.
     def outPlayers(self,q):
-        outmsg = " | ".join(q["resp"].values())
+        outmsg = " :: ".join(q["resp"].values())
         self.respond(q["replyto"],q["sender"],outmsg)
 
     def usageWhereIs(self, sender, replyto, msgwords):
@@ -940,7 +940,7 @@ class DeathBotProtocol(irc.IRCClient):
                 player = q["resp"][server].split(" ")[1]
             else:
                 msgs += [q["resp"][server]]
-        outmsg = " | ".join(msgs)
+        outmsg = " :: ".join(msgs)
         if not outmsg: outmsg = player + " is not playing."
         self.respond(q["replyto"],q["sender"],outmsg)
 
@@ -1054,7 +1054,7 @@ class DeathBotProtocol(irc.IRCClient):
                 fallback_msg = q["resp"][server]
             else:
                msgs += [q["resp"][server]]
-        outmsg = " | ".join(msgs)
+        outmsg = " :: ".join(msgs)
         if not outmsg: outmsg = fallback_msg
         self.respond(q["replyto"],q["sender"],outmsg)
 
