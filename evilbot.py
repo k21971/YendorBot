@@ -39,6 +39,7 @@ from twisted.internet import reactor, protocol, ssl, task
 from twisted.internet.protocol import Protocol, ReconnectingClientFactory
 from twisted.words.protocols import irc
 from twisted.python import filepath, log
+from twisted.python.logfile import DailyLogFile
 from twisted.application import internet, service
 import site     # to help find botconf
 import base64   # for sasl login
@@ -62,7 +63,9 @@ from evilbotconf import SERVERTAG
 #from evilbotconf import NICK, USERNAME, REALNAME
 #from evilbotconf import PWFILE, LOGDIR, PINOBOT, ADMIN
 
-try: from evilbotconf import LL_TURNCOUNTS
+try: from evilbotconf import LOGBASE
+except: LOGBASE = "/var/log/evilbot.log"
+try: from botconf import LL_TURNCOUNTS
 except: LL_TURNCOUNTS = {}
 try: from evilbotconf import DCBRIDGE
 except: DCBRIDGE = None
@@ -1070,7 +1073,8 @@ class DeathBotProtocol(irc.IRCClient):
         return True
 
     def streakDate(self,stamp):
-        return datetime.datetime.fromtimestamp(float(stamp)).strftime("%Y-%m-%d")
+        #return datetime.datetime.fromtimestamp(float(stamp)).strftime("%Y-%m-%d")
+        return stamp.strftime("%Y-%m-%d")
 
     def getStreak(self, master, sender, query, msgwords):
         (PLR, var) = self.plrVar(sender, "", msgwords)
@@ -1078,8 +1082,8 @@ class DeathBotProtocol(irc.IRCClient):
         plr = PLR.lower()
         reply = "#R# " + query + " "
         if var:
-            (lstart,lend,llength) = self.longstreak[var].get(plr,(0,0,0))
-            (cstart,cend,clength) = self.curstreak[var].get(plr,(0,0,0))
+            (lstart,lend,llength) = self.longstreak[var].get(plr,(T0,T0,0))
+            (cstart,cend,clength) = self.curstreak[var].get(plr,(T0,T0,0))
             if llength == 0:
                 reply += "No streaks for " + PLR + self.displaytag(var) + "."
                 self.msg(master,reply)
@@ -1098,8 +1102,8 @@ class DeathBotProtocol(irc.IRCClient):
             return
         (lmax,cmax) = (0,0)
         for var in self.streakvars:
-            (lstart,lend,llength) = self.longstreak[var].get(plr,(0,0,0))
-            (cstart,cend,clength) = self.curstreak[var].get(plr,(0,0,0))
+            (lstart,lend,llength) = self.longstreak[var].get(plr,(T0,T0,0))
+            (cstart,cend,clength) = self.curstreak[var].get(plr,(T0,T0,0))
             if llength > lmax:
                 (lmax, lvar, lsmax, lemax)  = (llength, var, lstart, lend)
             if clength > cmax:
@@ -1567,8 +1571,7 @@ class DeathBotFactory(ReconnectingClientFactory):
 
 if __name__ == '__main__':
     # initialize logging
-    if TEST:
-        log.startLogging(sys.stdout)
+    log.startLogging(DailyLogFile.fromFullPath(LOGBASE))
 
     # create factory protocol and application
     f = DeathBotFactory()
