@@ -82,8 +82,6 @@ except:
     SLAVE = False #if we have no master we (definitely) are the master
     MASTERS = []
 
-T0 = datetime.datetime.fromtimestamp(0)
-
 def fromtimestamp_int(s):
     return datetime.datetime.fromtimestamp(int(s))
 
@@ -98,12 +96,13 @@ def fixdump(s):
 
 xlogfile_parse = dict.fromkeys(
     ("points", "deathdnum", "deathlev", "maxlvl", "hp", "maxhp", "deaths",
+     "starttime", "curtime", "endtime",
      "uid", "turns", "xplevel", "exp","depth","dnum","score","amulet", "lltype"), int)
 xlogfile_parse.update(dict.fromkeys(
     ("conduct", "event", "carried", "flags", "achieve"), ast.literal_eval))
-xlogfile_parse["starttime"] = fromtimestamp_int
-xlogfile_parse["curtime"] = fromtimestamp_int
-xlogfile_parse["endtime"] = fromtimestamp_int
+#xlogfile_parse["starttime"] = fromtimestamp_int
+#xlogfile_parse["curtime"] = fromtimestamp_int
+#xlogfile_parse["endtime"] = fromtimestamp_int
 xlogfile_parse["realtime"] = timedelta_int
 #xlogfile_parse["deathdate"] = xlogfile_parse["birthdate"] = isodate
 #xlogfile_parse["dumplog"] = fixdump
@@ -294,9 +293,9 @@ class DeathBotProtocol(irc.IRCClient):
         # variant and variant:player don't need this if we assume the xlogfiles are
         # ordered within variant.
         self.lge = {}
-        self.tlastgame = T0
+        self.tlastgame = 0
         self.lae = {}
-        self.tlastasc = T0
+        self.tlastasc = 0
 
         # streaks
         self.curstreak = {}
@@ -691,7 +690,7 @@ class DeathBotProtocol(irc.IRCClient):
            self.respond(replyto, sender, self.rolename[random.choice(self.variants[v][1])])
         else:
            #pick variant first
-           v = random.choice(self.variants.keys())
+           v = random.choice(list(self.variants.keys()))
            self.respond(replyto, sender, self.variants[v][0][0] + " " + self.rolename[random.choice(self.variants[v][1])])
 
     def doRace(self, sender, replyto, msgwords):
@@ -702,11 +701,11 @@ class DeathBotProtocol(irc.IRCClient):
                self.respond(replyto, sender, "EvilHack is the only variant option.")
            self.respond(replyto, sender, self.racename[random.choice(self.variants[v][2])])
         else:
-           v = random.choice(self.variants.keys())
+           v = random.choice(list(self.variants.keys()))
            self.respond(replyto, sender, self.variants[v][0][0] + " " + self.racename[random.choice(self.variants[v][2])])
 
     def doVariant(self, sender, replyto, msgwords):
-        self.respond(replyto, sender, self.variants[random.choice(self.variants.keys())][0][0])
+        self.respond(replyto, sender, self.variants[random.choice(list(self.variants.keys()))][0][0])
 
     def doBeer(self, sender, replyto, msgwords):
         self.respond(replyto, sender, random.choice(["It's your shout!", "I thought you'd never ask!",
@@ -756,14 +755,14 @@ class DeathBotProtocol(irc.IRCClient):
     def doTea(self, sender, replyto, msgwords):
         if len(msgwords) > 1: target = msgwords[1]
         else: target = sender
-        drink = random.choice([msgwords[0]] * 50 + self.bev["drink"].keys())
-        for vchoice in xrange(10):
+        drink = random.choice([msgwords[0]] * 50 + list(self.bev["drink"].keys()))
+        for vchoice in range(10):
             vessel = random.choice(self.bev["vessel"]["all"])
             if drink not in self.bev["vessel"].keys(): break # anything goes for these
             if vessel in self.bev["vessel"][drink]: break # match!
         fulldrink = random.choice(self.bev["drink"][drink])
         if drink not in self.bev["suppress"]: fulldrink += " " + drink
-        tempunit = random.choice(self.bev["degrees"].keys())
+        tempunit = random.choice(list(self.bev["degrees"].keys()))
         [tmin,tmax] = self.bev["degrees"][tempunit]
         temp = random.randrange(tmin,tmax)
         self.describeLog(replyto, random.choice(self.bev["serves"]) + " " + target
@@ -916,7 +915,7 @@ class DeathBotProtocol(irc.IRCClient):
                             for wipath in glob.iglob(widir + "*.whereis"):
                                 if wipath.split("/")[-1].lower() == (msgwords[1] + ".whereis").lower():
                                     plr = wipath.split("/")[-1].split(".")[0] # Correct case
-                                    wirec = parse_xlogfile_line(open(wipath, "r").read().strip(),":")
+                                    wirec = parse_xlogfile_line(open(wipath, "rb").read(),":")
 
                                     self.msg(master, "#R# " + query
                                              + " " + self.displaytag(SERVERTAG) + " " + plr
@@ -1053,6 +1052,7 @@ class DeathBotProtocol(irc.IRCClient):
 
     def outAscStreak(self,q):
         msgs = []
+        fallback_msg = ""
         for server in q["resp"]:
             if q["resp"][server].split(' ')[0] == 'No':
                 # If they all say "No streaks for bob", that becomes the eventual output
@@ -1073,8 +1073,8 @@ class DeathBotProtocol(irc.IRCClient):
         return True
 
     def streakDate(self,stamp):
-        #return datetime.datetime.fromtimestamp(float(stamp)).strftime("%Y-%m-%d")
-        return stamp.strftime("%Y-%m-%d")
+        return datetime.datetime.fromtimestamp(float(stamp)).strftime("%Y-%m-%d")
+        #return stamp.strftime("%Y-%m-%d")
 
     def getStreak(self, master, sender, query, msgwords):
         (PLR, var) = self.plrVar(sender, "", msgwords)
@@ -1082,8 +1082,8 @@ class DeathBotProtocol(irc.IRCClient):
         plr = PLR.lower()
         reply = "#R# " + query + " "
         if var:
-            (lstart,lend,llength) = self.longstreak[var].get(plr,(T0,T0,0))
-            (cstart,cend,clength) = self.curstreak[var].get(plr,(T0,T0,0))
+            (lstart,lend,llength) = self.longstreak[var].get(plr,(0,0,0))
+            (cstart,cend,clength) = self.curstreak[var].get(plr,(0,0,0))
             if llength == 0:
                 reply += "No streaks for " + PLR + self.displaytag(var) + "."
                 self.msg(master,reply)
@@ -1102,8 +1102,8 @@ class DeathBotProtocol(irc.IRCClient):
             return
         (lmax,cmax) = (0,0)
         for var in self.streakvars:
-            (lstart,lend,llength) = self.longstreak[var].get(plr,(T0,T0,0))
-            (cstart,cend,clength) = self.curstreak[var].get(plr,(T0,T0,0))
+            (lstart,lend,llength) = self.longstreak[var].get(plr,(0,0,0))
+            (cstart,cend,clength) = self.curstreak[var].get(plr,(0,0,0))
             if llength > lmax:
                 (lmax, lvar, lsmax, lemax)  = (llength, var, lstart, lend)
             if clength > cmax:
@@ -1153,9 +1153,9 @@ class DeathBotProtocol(irc.IRCClient):
         if (len(msgwords) >= 3): #var, plr, any order.
             vp = self.varalias(msgwords[1])
             pv = self.varalias(msgwords[2])
-            dl = self.la.get(":".join(pv,vp).lower(),False)
+            dl = self.la.get(":".join([pv,vp]).lower(),False)
             if not dl:
-                dl = self.la.get(":".join(vp,pv).lower(),False)
+                dl = self.la.get(":".join([vp,pv]).lower(),False)
             if not dl:
                 self.msg(master, "#R# " + query +
                                  " No last ascension for (" + ",".join(msgwords[1:3]) + ").")
@@ -1362,7 +1362,7 @@ class DeathBotProtocol(irc.IRCClient):
             dumpurl = urllib.parse.quote(game["dumpfmt"].format(**game))
             dumpurl = self.dump_url_prefix.format(**game) + dumpurl
         self.lg["{variant}:{name}".format(**game).lower()] = dumpurl
-        if (game["endtime"] > self.lge.get(lname, T0)):
+        if (game["endtime"] > self.lge.get(lname, 0)):
             self.lge[lname] = game["endtime"]
             self.lg[lname] = dumpurl
         self.lg[var] = dumpurl
@@ -1380,7 +1380,7 @@ class DeathBotProtocol(irc.IRCClient):
             game["ascsuff"] = "\n" + dumpurl
             # !lastasc stats.
             self.la["{variant}:{name}".format(**game).lower()] = dumpurl
-            if (game["endtime"] > self.lae.get(lname, T0)):
+            if (game["endtime"] > self.lae.get(lname, 0)):
                 self.lae[lname] = game["endtime"]
                 self.la[lname] = dumpurl
             self.la[var] = dumpurl
@@ -1403,12 +1403,12 @@ class DeathBotProtocol(irc.IRCClient):
             if var in self.streakvars:
                 (cs_start, cs_end,
                  cs_length) = self.curstreak[var].get(lname,
-                                                      (game["starttime"],T0,0))
+                                                      (game["starttime"],0,0))
                 cs_end = game["endtime"]
                 cs_length += 1
                 self.curstreak[var][lname] = (cs_start, cs_end, cs_length)
                 (ls_start, ls_end,
-                 ls_length) = self.longstreak[var].get(lname, (T0,T0,0))
+                 ls_length) = self.longstreak[var].get(lname, (0,0,0))
                 if cs_length > ls_length:
                     self.longstreak[var][lname] = self.curstreak[var][lname]
 
