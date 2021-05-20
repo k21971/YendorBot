@@ -4,13 +4,13 @@
 # server tag - mandatory for all instances
 SERVERTAG = "hdf-us"
 # connection
-HOST, PORT = "chat.us.freenode.net", 6697
+HOST, PORT = "irc.libera.chat", 6697
 
 # Nick, channel, etc
 CHANNEL = "#evilhack" #channel is ignored on slave bots.
-NICK = "EvilBot"
-USERNAME = "EvilBot"
-REALNAME = "EvilBot"
+NICK = "Hecubus"
+USERNAME = "Hecubus"
+REALNAME = "Hecubus"
 # working directory (some files will be created here)
 BOTDIR = "/opt/evilbot"
 # file containing the nickserv password for NICK
@@ -45,8 +45,8 @@ LL_TURNCOUNTS = {
 # and the name of the "slave" bot that looks after each server.
 #            alias: (fqdn-of-server, remote-bot, path-to-local-copy-of-xlogfiles)
 # only define one of REMOTES or MASTERS
-REMOTES = { "hdf-eu": ("eu.hardfought.org", "EvilBot-EU", "/var/www/html/xlogfiles/"),
-            "hdf-au": ("au.hardfought.org", "EvilBot-AU", "/var/www/html/xlogfiles/")}
+REMOTES = { "hdf-eu": ("eu.hardfought.org", "Hecubus-EU", "/var/www/html/xlogfiles/"),
+            "hdf-au": ("au.hardfought.org", "Hecubus-AU", "/var/www/html/xlogfiles/")}
 # If we're a remote "slave" bot, MASTERS defines who we announce to, and who we take
 # queries from for !whereis, etc.
-#MASTERS = ["EvilBot"]
+#MASTERS = ["Hecubus"]
