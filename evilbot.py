@@ -273,6 +273,7 @@ class DeathBotProtocol(irc.IRCClient):
     def signedOn(self):
         self.factory.resetDelay()
         self.startHeartbeat()
+        self.sendLine('MODE {} -R'.format(self.nickname))
         if not SLAVE: self.join(CHANNEL)
         random.seed()
 
