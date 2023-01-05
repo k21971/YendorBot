@@ -59,9 +59,6 @@ site.addsitedir('.')
 from evilbotconf import HOST, PORT, CHANNEL, NICK, USERNAME, REALNAME, BOTDIR
 from evilbotconf import PWFILE, FILEROOT, WEBROOT, LOGROOT, PINOBOT, ADMIN
 from evilbotconf import SERVERTAG
-#from evilbotconf import HOST, PORT, CHANNEL
-#from evilbotconf import NICK, USERNAME, REALNAME
-#from evilbotconf import PWFILE, LOGDIR, PINOBOT, ADMIN
 
 try: from evilbotconf import LOGBASE
 except: LOGBASE = "/var/log/evilbot.log"
@@ -96,16 +93,11 @@ def fixdump(s):
 
 xlogfile_parse = dict.fromkeys(
     ("points", "deathdnum", "deathlev", "maxlvl", "hp", "maxhp", "deaths",
-     "starttime", "curtime", "endtime",
+     "starttime", "curtime", "endtime", "user_seed",
      "uid", "turns", "xplevel", "exp","depth","dnum","score","amulet", "lltype"), int)
 xlogfile_parse.update(dict.fromkeys(
     ("conduct", "event", "carried", "flags", "achieve"), ast.literal_eval))
-#xlogfile_parse["starttime"] = fromtimestamp_int
-#xlogfile_parse["curtime"] = fromtimestamp_int
-#xlogfile_parse["endtime"] = fromtimestamp_int
 xlogfile_parse["realtime"] = timedelta_int
-#xlogfile_parse["deathdate"] = xlogfile_parse["birthdate"] = isodate
-#xlogfile_parse["dumplog"] = fixdump
 
 def parse_xlogfile_line(line, delim):
     record = {}
@@ -115,12 +107,6 @@ def parse_xlogfile_line(line, delim):
             value = xlogfile_parse[key](value)
         record[key] = value
     return record
-
-#def xlogfile_entries(fp):
-#    if fp is None: return
-#    with fp.open("rt") as handle:
-#        for line in handle:
-#            yield parse_xlogfile_line(line)
 
 class DeathBotProtocol(irc.IRCClient):
     nickname = NICK
@@ -1435,6 +1421,19 @@ class DeathBotProtocol(irc.IRCClient):
 
         if (not report): return # we're just reading through old entries at startup
 
+        # format duration string based on realtime and/or wallclock duration
+        if "starttime" in game and "endtime" in game:
+            game["wallclock"] = timedelta_int(game["endtime"] - game["starttime"])
+        if "realtime" in game and "wallclock" in game:
+            if game["realtime"] == game["wallclock"]:
+                game["duration_str"] = f"[{game['realtime']}]"
+            else:
+                game["duration_str"] = f"rt[{game['realtime']}], wc[{game['wallclock']}]"
+        elif "realtime" in game and "wallclock" not in game:
+                game["duration_str"] = f"rt[{game['realtime']}]"
+        elif "wallclock" in game and "realtime" not in game:
+                game["duration_str"] = f"wc[{game['wallclock']}]"
+
         # start of actual reporting
         if game.get("charname", False):
             if game.get("name", False):
@@ -1451,6 +1450,9 @@ class DeathBotProtocol(irc.IRCClient):
             if game.get("version","unknown") == "NH-1.3d":
                 yield ("[{displaystring}] {name} ({role} {gender}), "
                        "{points} points, T:{turns}, {death}{ascsuff}").format(**game)
+            elif var == "seed" and "duration_str" in game:
+                yield ("[{displaystring}] {name} ({role} {race} {gender} {align}), "
+                       "{points} points, T:{turns}, {duration_str}, {death}{ascsuff}").format(**game)
             else:
                 yield ("[{displaystring}] {name} ({role} {race} {gender} {align}), "
                        "{points} points, T:{turns}, {death}{ascsuff}").format(**game)
@@ -1489,8 +1491,20 @@ class DeathBotProtocol(irc.IRCClient):
                     event["lltype"] &= ~t
                     if not event["lltype"]: return
         if "message" in event:
-            yield ("[{displaystring}] {player} ({role} {race} {gender} {align}) "
-                   "{message}, on T:{turns}").format(**event)
+            if event["message"] == "entered the Dungeons of Doom":
+                if "user_seed" in event and "seed" in event and event["user_seed"]:
+                    yield("[{displaystring}] {player} ({role} {race} {gender} {align}) "
+                    "{message} [chosen seed: {seed}]".format(**event))
+                else:
+                    yield("[{displaystring}] {player} ({role} {race} {gender} {align}) "
+                    "{message} [random seed]".format(**event))
+            elif "realtime" in event:
+                event["realtime_fmt"] = str(event["realtime"])
+                yield ("[{displaystring}] {player} ({role} {race} {gender} {align}) "
+                       "{message}, on T:{turns}, rt[{realtime_fmt}]").format(**event)
+            else:
+                yield ("[{displaystring}] {player} ({role} {race} {gender} {align}) "
+                       "{message}, on T:{turns}").format(**event)
         elif "wish" in event:
             yield ("[{displaystring}] {player} ({role} {race} {gender} {align}) "
                    'wished for "{wish}", on T:{turns}').format(**event)
