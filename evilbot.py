@@ -1501,7 +1501,7 @@ class DeathBotProtocol(irc.IRCClient):
             elif "realtime" in event:
                 event["realtime_fmt"] = str(event["realtime"])
                 yield ("[{displaystring}] {player} ({role} {race} {gender} {align}) "
-                       "{message}, on T:{turns}, rt[{realtime_fmt}]").format(**event)
+                       "{message}, on T:{turns} ({realtime_fmt})").format(**event)
             else:
                 yield ("[{displaystring}] {player} ({role} {race} {gender} {align}) "
                        "{message}, on T:{turns}").format(**event)
