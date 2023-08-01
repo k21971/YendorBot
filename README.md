@@ -1,7 +1,7 @@
-# evilbot
-IRC Announce Bot for #evilhack, based on https://github.com/NHTangles/beholder
+# yendorbot
+IRC Announce Bot for #nethackathon, based on https://github.com/NHTangles/beholder
 run bot by executing the python script (twistd seems no longer required with new API):
- ./beholder.py
+ ./yendorbot.py
 Some enhancements to the original deathbot code include:
  - delimiter-agnostic xlogfile parsing (because some newer variants have moved
    from the traditional ':' delimiter to a <tab> character.
