@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: UTF-8 -*-
 """
-evilbot.py - a game-reporting and general services IRC bot for
-             EvilHack on the hardfought.org NetHack server.
+yendorbot.py - a game-reporting and general services IRC bot for
+             NetHackathon on the hardfought.org NetHack server.
 Copyright (c) 2021 A. Thomson, K. Simpson
 Based on original code from:
 beholder.py - a game-reporting IRC bot for hardfought.org
@@ -56,25 +56,25 @@ import random   # for !rng and friends
 import glob     # for matching in !whereis
 
 site.addsitedir('.')
-from evilbotconf import HOST, PORT, CHANNEL, NICK, USERNAME, REALNAME, BOTDIR
-from evilbotconf import PWFILE, FILEROOT, WEBROOT, LOGROOT, PINOBOT, ADMIN
-from evilbotconf import SERVERTAG
+from yendorbotconf import HOST, PORT, CHANNEL, NICK, USERNAME, REALNAME, BOTDIR
+from yendorbotconf import PWFILE, FILEROOT, WEBROOT, LOGROOT, PINOBOT, ADMIN
+from yendorbotconf import SERVERTAG
 
-try: from evilbotconf import LOGBASE
-except: LOGBASE = "/var/log/evilbot.log"
+try: from yendorbotconf import LOGBASE
+except: LOGBASE = "/var/log/yendorbot.log"
 try: from botconf import LL_TURNCOUNTS
 except: LL_TURNCOUNTS = {}
-try: from evilbotconf import DCBRIDGE
+try: from yendorbotconf import DCBRIDGE
 except: DCBRIDGE = None
-try: from evilbotconf import TEST
+try: from yendorbotconf import TEST
 except: TEST = False
 try:
-    from evilbotconf import REMOTES
+    from yendorbotconf import REMOTES
 except:
     SLAVE = True #if we have no slaves, we (probably) are the slave
     REMOTES = {}
 try:
-    from evilbotconf import MASTERS
+    from yendorbotconf import MASTERS
 except:
     SLAVE = False #if we have no master we (definitely) are the master
     MASTERS = []
@@ -126,15 +126,15 @@ class DeathBotProtocol(irc.IRCClient):
     except:
         password = "NotTHEPassword"
 
-    sourceURL = "https://github.com/k21971/EvilBot"
-    versionName = "evilbot.py"
+    sourceURL = "https://github.com/k21971/YendorBot"
+    versionName = "yendorbot.py"
     versionNum = "0.1"
 
     dump_url_prefix = WEBROOT + "userdata/{name[0]}/{name}/"
     dump_file_prefix = FILEROOT + "dgldir/userdata/{name[0]}/{name}/"
 
     if not SLAVE:
-        scoresURL = "https://nethackscoreboard.org/ascended.evil.html"
+        scoresURL = "https://nethackscoreboard.org/ascended.nh.html"
         ttyrecURL = WEBROOT + "nethack/ttyrecs"
         rceditURL = WEBROOT + "nethack/rcedit"
         helpURL = WEBROOT + "nethack"
@@ -143,17 +143,17 @@ class DeathBotProtocol(irc.IRCClient):
         chanLog = open(chanLogName,'a')
         os.chmod(chanLogName,stat.S_IRUSR|stat.S_IWUSR|stat.S_IRGRP|stat.S_IROTH)
 
-    xlogfiles = {filepath.FilePath(FILEROOT+"evilhack-0.8.2/var/xlogfile"): ("evil", "\t", "evilhack/dumplog/{starttime}.evil.html")}
-    livelogs  = {filepath.FilePath(FILEROOT+"evilhack-0.8.2/var/livelog"): ("evil", "\t")}
+    xlogfiles = {filepath.FilePath(FILEROOT+"nethackathon/var/xlogfile"): ("nhthon", "\t", "nethackathon/dumplog/{starttime}.nhthon.html")}
+    livelogs  = {filepath.FilePath(FILEROOT+"nethackathon/var/livelog"): ("nhthon", "\t")}
 
     # Forward events to other bots at the request of maintainers of other variant-specific channels
-    forwards = {"evil" : []}
+    forwards = {"nhthon" : []}
 
     # for displaying variants and server tags in colour
-    displaystring = {"evil" : "\x0304evil\x03",
-                    "hdf-us" : "\x1D\x0304hdf-us\x03\x0F",
-                    "hdf-au" : "\x1D\x0303hdf-au\x03\x0F",
-                    "hdf-eu" : "\x1D\x0312hdf-eu\x03\x0F"}
+    displaystring = {"nhthon" : "\x0311nhthon\x03",
+                     "hdf-us" : "\x1D\x0304hdf-us\x03\x0F",
+                     "hdf-au" : "\x1D\x0303hdf-au\x03\x0F",
+                     "hdf-eu" : "\x1D\x0312hdf-eu\x03\x0F"}
 
     # put the displaystring for a thing in square brackets
     def displaytag(self, thing):
@@ -163,27 +163,14 @@ class DeathBotProtocol(irc.IRCClient):
     # Reduce the repetitive crap
     DGLD=FILEROOT+"dgldir/"
     INPR=DGLD+"inprogress-"
-    inprog = { "evil" : [INPR+"evil040/", INPR+"evil041/",
-                         INPR+"evil042/", INPR+"evil050/",
-                         INPR+"evil060/", INPR+"evil070/",
-                         INPR+"evil071/", INPR+"evil080/",
-                         INPR+"evil081/", INPR+"evil082/"]}
+    inprog = { "nhthon" : [INPR+"nethackathon/"]}
 
     # for !whereis
-    whereis = {"evil": [FILEROOT+"evilhack-0.4.0/var/whereis/",
-                        FILEROOT+"evilhack-0.4.1/var/whereis/",
-                        FILEROOT+"evilhack-0.4.2/var/whereis/",
-                        FILEROOT+"evilhack-0.5.0/var/whereis/",
-                        FILEROOT+"evilhack-0.6.0/var/whereis/",
-                        FILEROOT+"evilhack-0.7.0/var/whereis/",
-                        FILEROOT+"evilhack-0.7.1/var/whereis/",
-                        FILEROOT+"evilhack-0.8.0/var/whereis/",
-                        FILEROOT+"evilhack-0.8.1/var/whereis/",
-                        FILEROOT+"evilhack-0.8.2/var/whereis/"]}
+    whereis = {"nhthon": [FILEROOT+"nethackathon/var/whereis/"]}
 
-    dungeons = {"evil": ["The Dungeons of Doom","Gehennom","The Gnomish Mines","Goblin Town",
-                         "The Quest","Sokoban","Fort Ludios","The Ice Queen's Realm","Vecna's Domain",
-                         "Vlad's Tower","Purgatory","The Elemental Planes"]}
+    dungeons = {"nhthon": ["The Dungeons of Doom","Gehennom","The Gnomish Mines",
+                           "The Quest","Sokoban","Fort Ludios","Vlad's Tower",
+                           "The Elemental Planes"]}
 
     # variant related stuff that does not relate to xlogfile processing
     rolename = 	{
@@ -199,9 +186,7 @@ class DeathBotProtocol(irc.IRCClient):
         "sam": "samurai",
         "tou": "tourist",
         "val": "valkyrie",
-        "wiz": "wizard",
-        "con": "convict",
-        "inf": "infidel"
+        "wiz": "wizard"
     }
 
     racename = {
@@ -209,35 +194,28 @@ class DeathBotProtocol(irc.IRCClient):
         "elf": "elf",
         "gno": "gnome",
         "hum": "human",
-        "orc": "orc",
-        "gia": "giant",
-        "cen": "centaur",
-        "hob": "hobbit",
-        "ill": "illithid",
-        "trt": "tortle",
-        "dro": "drow"
+        "orc": "orc"
     }
     # save typing these out in multiple places
-    evil_roles = ["arc","bar","cav","hea","kni","mon","pri",
-                  "ran","rog","sam","tou","val","wiz","con","inf"]
-    evil_races = ["dwa","elf","gno","hum","orc","gia","cen",
-                  "hob","ill","trt","dro"]
+    nhthon_roles = ["arc","bar","cav","hea","kni","mon","pri",
+                    "ran","rog","sam","tou","val","wiz"]
+    nhthon_races = ["dwa","elf","gno","hum","orc"]
 
     # varname: ([aliases],[roles],[races])
     # first alias will be used for !variant
     # note this breaks if a player has the same name as an alias
     # so don't do that (I'm looking at you, FIQ)
-    variants = {"evil": (["evilhack", "evil", "evl"],
-                         evil_roles, evil_races)}
+    variants = {"nhthon": (["nethackathon", "nhthon"],
+                           nhthon_roles, nhthon_races)}
 
-    # variants which support streaks - now tracking slex streaks, because that's totally possible.
-    streakvars = ["evil"]
+    # variants which support streaks.
+    streakvars = ["nhthon"]
     # for !asc statistics - assume these are the same for all variants, or at least the sane ones.
-    aligns = ["Law", "Neu", "Cha", "Una"]
+    aligns = ["Law", "Neu", "Cha"]
     genders = ["Mal", "Fem"]
 
     #who is making tea? - bots of the nethack community who have influenced this project.
-    brethren = ["Rodney", "Athame", "Arsinoe", "Izchak", "TheresaMayBot", "FCCBot", "Pinobot", "Announcy", "demogorgon", "the /dev/null/oracle", "NotTheOracle\\dnt", "Croesus", "Beholder"]
+    brethren = ["Rodney", "Athame", "Arsinoe", "Izchak", "TheresaMayBot", "FCCBot", "Pinobot", "Announcy", "demogorgon", "the /dev/null/oracle", "NotTheOracle\\dnt", "Croesus", "Beholder", "Hecubus"]
     looping_calls = None
 
     # SASL auth nonsense required if we run on AWS
@@ -686,7 +664,7 @@ class DeathBotProtocol(irc.IRCClient):
            v = self.varalias(msgwords[1])
            #error if variant not found
            if not self.variants.get(v,False):
-               self.respond(replyto, sender, "EvilHack is the only variant option.")
+               self.respond(replyto, sender, "NetHackathon is the only variant option.")
                return
            self.respond(replyto, sender, self.rolename[random.choice(self.variants[v][1])])
         else:
@@ -699,7 +677,7 @@ class DeathBotProtocol(irc.IRCClient):
            v = self.varalias(msgwords[1])
            #error if variant not found
            if not self.variants.get(v,False):
-               self.respond(replyto, sender, "EvilHack is the only variant option.")
+               self.respond(replyto, sender, "NetHackathon is the only variant option.")
            self.respond(replyto, sender, self.racename[random.choice(self.variants[v][2])])
         else:
            v = random.choice(list(self.variants.keys()))
