@@ -22,7 +22,7 @@ PWFILE = BOTDIR + "/pw"
 FILEROOT="/opt/nethack/chroot/"
 WEBROOT="https://www.hardfought.org/"
 # directory to place channel logs.
-LOGROOT="/var/www/hardfought.org/irclog.nethackathon/"
+LOGROOT="/var/www/hardfought.org/irclog.yendor/"
 # Name of bot to forward "pinobot"-style queries
 PINOBOT = "Pinoclone"
 # Name of bot in our channel that bridges discord network
