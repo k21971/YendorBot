@@ -60,8 +60,8 @@ from yendorbotconf import HOST, PORT, CHANNEL, NICK, USERNAME, REALNAME, BOTDIR
 from yendorbotconf import PWFILE, FILEROOT, WEBROOT, LOGROOT, PINOBOT, ADMIN
 from yendorbotconf import SERVERTAG
 
-try: from yendorbotconf import LOGBASE
-except: LOGBASE = "/var/log/yendorbot.log"
+#try: from yendorbotconf import LOGBASE
+#except: LOGBASE = "/var/log/yendorbot.log"
 try: from botconf import LL_TURNCOUNTS
 except: LL_TURNCOUNTS = {}
 try: from yendorbotconf import DCBRIDGE
@@ -1584,7 +1584,7 @@ class DeathBotFactory(ReconnectingClientFactory):
 
 if __name__ == '__main__':
     # initialize logging
-    log.startLogging(DailyLogFile.fromFullPath(LOGBASE))
+    #log.startLogging(DailyLogFile.fromFullPath(LOGBASE))
 
     # create factory protocol and application
     f = DeathBotFactory()
