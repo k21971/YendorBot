@@ -1,4 +1,4 @@
-# Instance-specific config for "YendorBot" bot.
+# Instance-specific config for "YendorBot" bot
 #
 
 # server tag - mandatory for all instances
@@ -28,6 +28,21 @@ PINOBOT = "Pinoclone"
 # Name of bot in our channel that bridges discord network
 DCBRIDGE = "rld"
 
+# Enable Reddit monitoring for r/nethack (optional, default False)
+# Set to True to enable monitoring and announcing new posts
+ENABLE_REDDIT = False
+
+# Enable GitHub commit monitoring (optional, default False)
+# Set to True to enable monitoring and announcing new commits
+ENABLE_GITHUB = False
+
+# GitHub repositories to monitor (list of dicts with repo and branch)
+# Each entry should have 'repo' (format: "owner/repo") and 'branch' (usually "master" or "main")
+GITHUB_REPOS = [
+    {"repo": "nethackathon/nethackathon-nethack", "branch": "master"},
+    # Add more repositories here:
+    # {"repo": "k21971/YendorBot", "branch": "master"},
+]
 
 # people allowed to do certain admin things.
 # This is not terribly secure, as it does not verify the nick is authenticated. 
