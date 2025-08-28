@@ -1493,8 +1493,19 @@ class DeathBotProtocol(irc.IRCClient):
         if not self.github_repos:
             return  # GitHub monitoring not configured
 
+        # Collect all new commits from all repos
+        all_new_commits = []
+
         for repo_config in self.github_repos:
-            self._checkGitHubRepo(repo_config)
+            new_commits = self._checkGitHubRepo(repo_config)
+            if new_commits:
+                all_new_commits.extend(new_commits)
+
+        # Announce all new commits with delays to prevent flooding
+        for i, (msg, repo_name, short_hash, author) in enumerate(all_new_commits):
+            # Schedule message with one second delay between each
+            delay = i * 1.0
+            reactor.callLater(delay, self.msgLog, CHANNEL, msg)
 
         # Mark as initialized only after ALL repos have been checked
         if not self.github_initialized:
@@ -1504,6 +1515,7 @@ class DeathBotProtocol(irc.IRCClient):
         """Check a single GitHub repo for new commits"""
         repo = repo_config["repo"]
         branch = repo_config.get("branch", "master")
+        new_commits = []  # List to collect new commits
 
         try:
             # GitHub Atom feed for commits on specified branch
@@ -1513,7 +1525,7 @@ class DeathBotProtocol(irc.IRCClient):
             r = requests.get(url, headers=headers, timeout=10)
             if r.status_code != 200:
                 print(f"GitHub Atom feed for {repo} returned status {r.status_code}")
-                return
+                return new_commits
 
             # Parse XML
             root = ET.fromstring(r.text)
@@ -1560,8 +1572,9 @@ class DeathBotProtocol(irc.IRCClient):
                         # Format: [RepoName] author hash - Commit message URL
                         msg = f"[\x0312{repo_name}\x03] \x0307{author}\x03 \x0303{short_hash}\x03 - {title} \x0313{link}\x03"
 
-                        # Announce to channel
-                        self.msgLog(CHANNEL, msg)
+                        # Add tuple to list instead of announcing immediately
+                        # Store as (msg, repo_name, short_hash, author) for structured access
+                        new_commits.append((msg, repo_name, short_hash, author))
 
             # Clean up old commits to prevent memory growth
             # Keep only the 50 most recent commit IDs per repo
@@ -1578,6 +1591,8 @@ class DeathBotProtocol(irc.IRCClient):
             print(f"Error parsing GitHub Atom XML for {repo}: {e}")
         except Exception as e:
             print(f"Unexpected error checking GitHub: {e}")
+
+        return new_commits
 
     def takeMessage(self, sender, replyto, msgwords):
         if len(msgwords) < 3:
