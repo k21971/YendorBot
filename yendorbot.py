@@ -416,7 +416,7 @@ class DeathBotProtocol(irc.IRCClient):
 
         # for GitHub monitoring
         # Use a dict to track commits per repository
-        self.seen_github_commits = {}  # repo -> set of commit IDs
+        self.seen_github_commits = {}  # repo -> list of commit IDs (ordered)
         self.github_initialized = False
         self.github_repos = []
 
@@ -426,7 +426,7 @@ class DeathBotProtocol(irc.IRCClient):
             # Initialize seen commits for each repo
             for repo_config in self.github_repos:
                 repo_key = repo_config["repo"]
-                self.seen_github_commits[repo_key] = set()
+                self.seen_github_commits[repo_key] = []
 
     def _initializeCommands(self):
         """Initialize command mappings"""
@@ -1582,7 +1582,7 @@ class DeathBotProtocol(irc.IRCClient):
 
                 # Check if we've seen this commit before for this repo
                 if commit_id and title and commit_id not in self.seen_github_commits[repo]:
-                    self.seen_github_commits[repo].add(commit_id)
+                    self.seen_github_commits[repo].append(commit_id)
 
                     # Only announce if this is a recent check (not first run)
                     if hasattr(self, "github_initialized") and self.github_initialized:
@@ -1607,9 +1607,8 @@ class DeathBotProtocol(irc.IRCClient):
             # Clean up old commits to prevent memory growth
             # Keep only the 50 most recent commit IDs per repo
             if len(self.seen_github_commits[repo]) > 50:
-                # Convert to list and keep newest 50
-                commit_list = list(self.seen_github_commits[repo])
-                self.seen_github_commits[repo] = set(commit_list[-50:])
+                # Slice to keep the newest 50 (list maintains insertion order)
+                self.seen_github_commits[repo] = self.seen_github_commits[repo][-50:]
 
         except requests.exceptions.Timeout:
             print(f"Timeout checking GitHub Atom feed for {repo}")
