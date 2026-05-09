@@ -55,6 +55,7 @@ import random   # for !rng and friends
 import glob     # for matching in !whereis
 import requests # for !rumor
 import xml.etree.ElementTree as ET  # for RSS parsing
+from email.utils import parsedate_to_datetime  # for RSS pubDate parsing
 
 # Configuration constants for timeouts and limits
 QUERY_TIMEOUT = 5  # Timeout for queries in seconds
@@ -68,6 +69,7 @@ RATE_LIMIT_COMMANDS = 60   # Commands per minute for all operations (1/second)
 BURST_WINDOW = 1        # Burst protection: only 1 command per second window
 ABUSE_THRESHOLD = 10    # Consecutive commands before abuse penalty
 ABUSE_WINDOW = 30       # Time window for abuse detection (seconds)
+REDDIT_MAX_POST_AGE = 600  # Only announce Reddit posts younger than 10 minutes
 ABUSE_PENALTY = 900     # Abuse penalty duration in seconds (15 minutes)
 RESPONSE_RATE_LIMIT = 1   # Max penalty messages per 2 minutes to prevent spam
 RESPONSE_RATE_WINDOW = 120  # Penalty message rate limit window (2 minutes)
@@ -409,7 +411,7 @@ class DeathBotProtocol(irc.IRCClient):
             self.plr_tc = shelve.open(f"{BOTDIR}/plrtc", writeback=False, protocol=2)
 
         # for Reddit monitoring
-        self.seen_reddit_posts = set()
+        self.seen_reddit_posts = []  # list to maintain insertion order
         self.reddit_initialized = False
 
         # for GitHub monitoring
@@ -710,7 +712,7 @@ class DeathBotProtocol(irc.IRCClient):
         # Check Reddit for new posts (every 5 minutes)
         if not SLAVE and ENABLE_REDDIT:
             self.looping_calls["reddit"] = task.LoopingCall(self.checkReddit)
-            self.looping_calls["reddit"].start(300)  # 5 minutes
+            self.looping_calls["reddit"].start(300, now=False)  # 5 minutes, delay first check
 
         # Check GitHub for new commits (every minute)
         if not SLAVE and ENABLE_GITHUB and self.github_repos:
@@ -1257,7 +1259,6 @@ class DeathBotProtocol(irc.IRCClient):
             "degrees" :{"Kelvin": [0, 500], "degrees Celsius": [-20,95], "degrees Fahrenheit": [-20,200]}, #sane-ish ranges
             "suppress": ["coffee", "junk", "booze", "potion", "fictional"] } # do not append these to the random description
 
-
     def doTea(self, sender, replyto, msgwords):
         if len(msgwords) > 1: target = msgwords[1]
         else: target = sender
@@ -1418,13 +1419,18 @@ class DeathBotProtocol(irc.IRCClient):
                 # RSS 2.0 format
                 items = root.findall(".//item")
 
+            now_utc = datetime.datetime.now(datetime.timezone.utc)
+
             for item in items:
                 # Extract post information based on format
+                post_age = None  # Age of post in seconds (None = unknown)
+
                 if "{http://www.w3.org/2005/Atom}" in item.tag:
                     # Atom format
                     title_elem = item.find("{http://www.w3.org/2005/Atom}title")
                     link_elem = item.find("{http://www.w3.org/2005/Atom}link")
                     id_elem = item.find("{http://www.w3.org/2005/Atom}id")
+                    published_elem = item.find("{http://www.w3.org/2005/Atom}published")
 
                     title = title_elem.text if title_elem is not None else ""
                     link = link_elem.get("href", "") if link_elem is not None else ""
@@ -1433,11 +1439,20 @@ class DeathBotProtocol(irc.IRCClient):
                     post_id = None
                     if id_elem is not None and id_elem.text and "_" in id_elem.text:
                         post_id = id_elem.text.split("_")[-1]
+
+                    # Parse publication timestamp (ISO 8601)
+                    if published_elem is not None and published_elem.text:
+                        try:
+                            published_dt = datetime.datetime.fromisoformat(published_elem.text)
+                            post_age = (now_utc - published_dt).total_seconds()
+                        except (ValueError, TypeError):
+                            pass
                 else:
                     # RSS format
                     title_elem = item.find("title")
                     link_elem = item.find("link")
                     guid_elem = item.find("guid")
+                    pubdate_elem = item.find("pubDate")
 
                     title = title_elem.text if title_elem is not None else ""
                     link = link_elem.text if link_elem is not None else ""
@@ -1447,6 +1462,14 @@ class DeathBotProtocol(irc.IRCClient):
                     if guid_elem is not None and guid_elem.text and "_" in guid_elem.text:
                         post_id = guid_elem.text.split("_")[-1]
 
+                    # Parse publication timestamp (RFC 822)
+                    if pubdate_elem is not None and pubdate_elem.text:
+                        try:
+                            published_dt = parsedate_to_datetime(pubdate_elem.text)
+                            post_age = (now_utc - published_dt).total_seconds()
+                        except (ValueError, TypeError):
+                            pass
+
                 # If we couldn't get ID from feed elements, try extracting from URL
                 if not post_id and "/comments/" in link:
                     parts = link.split("/comments/")
@@ -1455,10 +1478,16 @@ class DeathBotProtocol(irc.IRCClient):
 
                 # Check if we've seen this post before
                 if post_id and title and post_id not in self.seen_reddit_posts:
-                    self.seen_reddit_posts.add(post_id)
+                    self.seen_reddit_posts.append(post_id)
 
-                    # Only announce if this is a recent check (not first run)
-                    if hasattr(self, "reddit_initialized") and self.reddit_initialized:
+                    # Only announce if ALL conditions are met:
+                    # 1. Not first run (reddit_initialized is True)
+                    # 2. Post is recent (younger than REDDIT_MAX_POST_AGE)
+                    #    If age is unknown (missing timestamp), skip to be safe
+                    if (hasattr(self, "reddit_initialized")
+                            and self.reddit_initialized
+                            and post_age is not None
+                            and post_age < REDDIT_MAX_POST_AGE):
                         # Sanitize title - remove format string placeholders
                         title = sanitize_format_string(title)
                         shortlink = f"https://redd.it/{post_id}"
@@ -1472,9 +1501,7 @@ class DeathBotProtocol(irc.IRCClient):
             # Clean up old posts to prevent memory growth
             # Keep only the 100 most recent post IDs
             if len(self.seen_reddit_posts) > 100:
-                # Convert to list, sort, and keep newest 100
-                post_list = list(self.seen_reddit_posts)
-                self.seen_reddit_posts = set(post_list[-100:])
+                self.seen_reddit_posts = self.seen_reddit_posts[-100:]
 
         except requests.exceptions.Timeout:
             print("Timeout checking Reddit RSS")
@@ -1811,7 +1838,6 @@ class DeathBotProtocol(irc.IRCClient):
         outmsg = " :: ".join(msgs)
         if not outmsg: outmsg = f"{player} is not playing."
         self.respond(q["replyto"],q["sender"],outmsg)
-
 
     def plrVar(self, sender, replyto, msgwords):
         # for !streak and !asc, work out what player and variant they want
@@ -2235,7 +2261,6 @@ class DeathBotProtocol(irc.IRCClient):
         user = user.split('!')[0]
         self.log("-!- " + user + " changed the topic on " + channel + " to: " + newTopic)
 
-
     ### Xlog/livelog event processing
     def startscummed(self, game):
         return game["death"] in ("quit", "escaped") and game["points"] < 1000
@@ -2560,7 +2585,6 @@ class DeathBotFactory(ReconnectingClientFactory):
 #    deathservice = internet.SSLClient(HOST, PORT, f,
 #                                      ssl.ClientContextFactory())
 #    deathservice.setServiceParent(application)
-
 
 if __name__ == '__main__':
     # initialize logging
