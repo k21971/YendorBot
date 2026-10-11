@@ -417,7 +417,7 @@ class DeathBotProtocol(irc.IRCClient):
         # for GitHub monitoring
         # Use a dict to track commits per repository
         self.seen_github_commits = {}  # repo -> list of commit IDs (ordered)
-        self.github_initialized = False
+        self.github_initialized_repos = set()  # repos with a successful first fetch
         self.github_repos = []
 
         if ENABLE_GITHUB and GITHUB_REPOS:
@@ -1534,10 +1534,6 @@ class DeathBotProtocol(irc.IRCClient):
             delay = i * 1.0
             reactor.callLater(delay, self.msgLog, CHANNEL, msg)
 
-        # Mark as initialized only after ALL repos have been checked
-        if not self.github_initialized:
-            self.github_initialized = True
-
     def _checkGitHubRepo(self, repo_config):
         """Check a single GitHub repo for new commits"""
         repo = repo_config["repo"]
@@ -1560,6 +1556,11 @@ class DeathBotProtocol(irc.IRCClient):
             # GitHub uses Atom format
             ns = {'atom': 'http://www.w3.org/2005/Atom'}
             entries = root.findall('atom:entry', ns)
+
+            # First successful fetch per repo only seeds seen commits. Tracked
+            # per repo so a repo whose first fetch failed doesn't announce its
+            # whole feed once it recovers.
+            announce = repo in self.github_initialized_repos
 
             # Reverse entries to process oldest first (Atom feed is newest first)
             for entry in reversed(entries):
@@ -1584,8 +1585,8 @@ class DeathBotProtocol(irc.IRCClient):
                 if commit_id and title and commit_id not in self.seen_github_commits[repo]:
                     self.seen_github_commits[repo].append(commit_id)
 
-                    # Only announce if this is a recent check (not first run)
-                    if hasattr(self, "github_initialized") and self.github_initialized:
+                    # Only announce once this repo has been seeded
+                    if announce:
                         # Sanitize title - remove format string placeholders
                         title = sanitize_format_string(title)
 
@@ -1603,6 +1604,12 @@ class DeathBotProtocol(irc.IRCClient):
                         # Add tuple to list instead of announcing immediately
                         # Store as (msg, repo_name, short_hash, author) for structured access
                         new_commits.append((msg, repo_name, short_hash, author))
+
+            # An empty feed seeds nothing, so stay uninitialized until one
+            # arrives with entries
+            if not announce and entries:
+                self.github_initialized_repos.add(repo)
+                print(f"GitHub: Initialized {repo} with {len(self.seen_github_commits[repo])} commits")
 
             # Clean up old commits to prevent memory growth
             # Keep only the 50 most recent commit IDs per repo
